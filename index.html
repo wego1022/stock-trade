@@ -33,6 +33,7 @@
         <a href="#/closed" class="nav-item" id="navClosed" data-view="closed"><span class="nav-ico">🗂</span>清仓股票</a>
         <a href="#/strategy" class="nav-item" id="navStrategy" data-view="strategy"><span class="nav-ico">🎯</span>策略管理</a>
         <a href="#/backtest" class="nav-item" id="navBacktest" data-view="backtest"><span class="nav-ico">🔬</span>历史回测</a>
+        <a href="#/aftermarket" class="nav-item" id="navAftermarket" data-view="aftermarket"><span class="nav-ico">🌙</span>盘后观察</a>
       </nav>
     </aside>
     <main class="container">
@@ -302,6 +303,26 @@
           </section>
         </section>
       </div>
+
+      <!-- 盘后观察视图 -->
+      <div id="viewAftermarket" hidden>
+        <div class="page-head">
+          <h2>盘后观察</h2>
+          <p class="page-sub">收盘后 15:10 自动生成当日盘后观察：今日触发信号总结 + 接近触发信号预警，方便次日操作。仅展示当日，不保存历史。</p>
+        </div>
+        <div class="am-toolbar">
+          <div id="aftermarketStatus" class="am-status"></div>
+          <button id="btnRefreshAftermarket" class="btn btn-sub">刷新盘后观察</button>
+        </div>
+        <section class="am-section">
+          <h3 class="am-title">今日触发信号总结</h3>
+          <div id="amTriggered" class="am-body"></div>
+        </section>
+        <section class="am-section">
+          <h3 class="am-title">接近触发信号预警</h3>
+          <div id="amNear" class="am-body"></div>
+        </section>
+      </div>
     </main>
   </div><!-- /app-layout -->
 
@@ -426,6 +447,7 @@
   <script src="js/config.js"></script>
   <script src="js/demo.js"></script>
   <script src="js/backtest.js"></script>
+  <script src="js/aftermarket.js"></script>
   <script src="js/ui.js"></script>
   <script src="js/app.js"></script>
 </body>

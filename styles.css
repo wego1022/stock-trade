@@ -793,3 +793,29 @@ body.nav-open .nav-toggle { left: 200px; }
 }
 .batch-sel-hint { font-size: 13px; color: var(--text-dim); margin-right: 4px; }
 #batchSelBar .btn-sub { margin-left: 6px; }
+
+/* ===== 盘后观察页 ===== */
+.am-toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+.am-status { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-dim); }
+.am-status span:last-child { line-height: 1.5; }
+.am-status-ok { color: var(--down); font-weight: 600; padding: 2px 8px; border-radius: 5px; background: rgba(39,201,63,.12); }
+.am-status-wait { color: var(--warn); font-weight: 600; padding: 2px 8px; border-radius: 5px; background: rgba(255,176,32,.12); }
+.am-status-close { color: var(--text-mute); font-weight: 600; padding: 2px 8px; border-radius: 5px; background: rgba(155,166,196,.12); }
+.am-section { margin-bottom: 20px; }
+.am-title { margin: 0 0 10px; font-size: 15px; color: var(--text); display: flex; align-items: center; gap: 8px; }
+.am-title::before { content: ""; width: 4px; height: 14px; border-radius: 2px; background: var(--accent); display: inline-block; }
+.am-body { background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px; padding: 6px 12px; }
+.am-subtitle { font-weight: 600; color: var(--text-dim); font-size: 13px; margin: 10px 0 4px; }
+.am-item {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 8px 4px; border-bottom: 1px solid rgba(255,255,255,.05); font-size: 13px;
+}
+.am-item:last-child { border-bottom: none; }
+.am-tag { padding: 2px 8px; border-radius: 5px; font-weight: 700; font-size: 12px; white-space: nowrap; }
+.tag-buy { background: rgba(34,211,238,.15); color: #22d3ee; border: 1px solid rgba(34,211,238,.4); }
+.tag-sell { background: rgba(39,201,63,.15); color: var(--down); border: 1px solid rgba(39,201,63,.4); }
+.tag-near-buy { background: rgba(34,211,238,.12); color: #22d3ee; border: 1px dashed rgba(34,211,238,.45); }
+.tag-near-sell { background: rgba(255,176,32,.12); color: var(--warn); border: 1px dashed rgba(255,176,32,.45); }
+.am-basis { color: var(--text-dim); font-size: 12px; flex: 1 1 260px; min-width: 200px; line-height: 1.5; }
+.am-empty { color: var(--text-mute); text-align: center; padding: 18px 0; font-size: 13px; }
+@media (max-width: 700px) { .am-toolbar { flex-direction: column; align-items: flex-start; } }

@@ -7,6 +7,7 @@ window.ST = window.ST || {};
   let strategies = [];
   let timer = null;
   let filterText = "";
+  let aftermarketDoneDate = ""; // 当日盘后观察是否已生成（避免重复触发）
   // 排序状态：key 可能是内置列名 或 "_default"（信号→纳入日期）
   let sortState = { key: "_default", dir: 1 };
 
@@ -220,14 +221,27 @@ window.ST = window.ST || {};
   }
 
   // 自动更新调度
+  // 定时器始终运行：暂停自动更新时交易时段不刷新行情，但 15:10 仍强制生成当日盘后观察
   function restartTimer() {
     if (timer) { clearInterval(timer); timer = null; }
-    if (!strat.autoUpdate) { updateAutoStatus(); return; }
     // 用较短间隔定时检查，使开收盘能准点切换；仅在建仓时段内才真正刷新
     const checkMs = Math.min(Math.max(10, strat.intervalSec), 60) * 1000;
     timer = setInterval(() => {
       if (isTradingSession()) {
-        refreshPrices(true);
+        if (strat.autoUpdate) {
+          refreshPrices(true);
+        } else {
+          updateAutoStatus(); // 已暂停：不刷新，仅更新状态
+        }
+      } else if (ST.Aftermarket && ST.Aftermarket.isAftermarketTime()) {
+        // 收盘后 15:10：拉一次收盘价并生成当日盘后观察（每交易日一次，暂停自动更新也强制执行）
+        const today = ST.Market.todayStr();
+        if (aftermarketDoneDate !== today) {
+          aftermarketDoneDate = today;
+          refreshPrices(true);
+          if (location.hash.indexOf("aftermarket") >= 0) ST.Aftermarket.render();
+        }
+        updateAutoStatus();
       } else {
         updateAutoStatus(); // 非交易时段：不刷新，仅更新状态
       }
@@ -536,6 +550,12 @@ window.ST = window.ST || {};
     if (document.getElementById("btnRunBacktest") && ST.Backtest) {
       document.getElementById("btnRunBacktest").addEventListener("click", () => ST.Backtest.run());
     }
+    if (document.getElementById("btnRefreshAftermarket") && ST.Aftermarket) {
+      document.getElementById("btnRefreshAftermarket").addEventListener("click", () => {
+        ST.Aftermarket.render();
+        ST.UI.toast("盘后观察已刷新", "success");
+      });
+    }
     document.getElementById("btnSaveSettings").addEventListener("click", saveSettings);
     document.getElementById("btnOperations").addEventListener("click", openOperation);
     // 表头点击排序
@@ -679,7 +699,7 @@ window.ST = window.ST || {};
   // hash 路由：切换视图并高亮导航
   function route() {
     const view = location.hash.replace(/^#\/?/, "") || "tracking";
-    const v = (view === "history" || view === "asset" || view === "closed" || view === "strategy" || view === "backtest") ? view : "tracking";
+    const v = (view === "history" || view === "asset" || view === "closed" || view === "strategy" || view === "backtest" || view === "aftermarket") ? view : "tracking";
     showView(v);
   }
   // 本地日期 → yyyy-MM-dd
@@ -699,13 +719,15 @@ window.ST = window.ST || {};
     const closed = document.getElementById("viewClosed");
     const strategy = document.getElementById("viewStrategy");
     const backtest = document.getElementById("viewBacktest");
-    if (!tracking || !history || !asset || !closed || !strategy || !backtest) return;
+    const aftermarket = document.getElementById("viewAftermarket");
+    if (!tracking || !history || !asset || !closed || !strategy || !backtest || !aftermarket) return;
     tracking.hidden = view !== "tracking";
     history.hidden = view !== "history";
     asset.hidden = view !== "asset";
     closed.hidden = view !== "closed";
     strategy.hidden = view !== "strategy";
     backtest.hidden = view !== "backtest";
+    aftermarket.hidden = view !== "aftermarket";
     const navs = document.querySelectorAll(".nav-item");
     navs.forEach(n => n.classList.toggle("active", n.getAttribute("data-view") === view));
     if (view === "history") {
@@ -729,6 +751,9 @@ window.ST = window.ST || {};
     } else if (view === "backtest") {
       // 进入回测页：填充配置（股票多选 / 区间 / 初始资金）
       if (ST.Backtest) ST.Backtest.renderConfig();
+    } else if (view === "aftermarket") {
+      // 进入盘后观察页：实时计算渲染
+      if (ST.Aftermarket) ST.Aftermarket.render();
     }
   }
 
