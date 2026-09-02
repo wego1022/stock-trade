@@ -1,0 +1,70 @@
+{
+  "st.strategy.v1": {
+    "shortMA": 5,
+    "midMA": 20,
+    "longMA": 60,
+    "stopLoss": 8,
+    "takeProfit": 25,
+    "breakoutRatio": 0.01,
+    "autoUpdate": true,
+    "intervalSec": 60
+  },
+  "st.strategies.v1": [
+    {
+      "id": "buy_breakout",
+      "name": "趋势突破买入",
+      "attr": "buy",
+      "enabled": true,
+      "params": {
+        "mode": "breakout",
+        "shortMA": 5,
+        "midMA": 20,
+        "longMA": 60,
+        "breakoutRatio": 0.01
+      }
+    },
+    {
+      "id": "buy_dip",
+      "name": "回踩低吸买入",
+      "attr": "buy",
+      "enabled": false,
+      "params": {
+        "mode": "dip",
+        "shortMA": 5,
+        "midMA": 20,
+        "longMA": 60,
+        "pullRatio": 0.03
+      }
+    },
+    {
+      "id": "sell_partial",
+      "name": "部分止盈",
+      "attr": "sell_partial",
+      "enabled": true,
+      "params": {
+        "gainPct": 25,
+        "ratio": 0.3
+      }
+    },
+    {
+      "id": "sell_belowMA",
+      "name": "跌破清仓",
+      "attr": "sell_all",
+      "enabled": true,
+      "params": {
+        "mode": "belowMA",
+        "ma": 20
+      }
+    },
+    {
+      "id": "sell_stoploss",
+      "name": "止损清仓",
+      "attr": "sell_all",
+      "enabled": true,
+      "params": {
+        "mode": "stoploss",
+        "lossPct": 8
+      }
+    }
+  ]
+}

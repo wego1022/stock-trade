@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>股票交易跟踪系统</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%236c5ce7'/><polyline points='18,72 40,52 52,62 82,30' fill='none' stroke='%23ffffff' stroke-width='10' stroke-linecap='round' stroke-linejoin='round'/><polyline points='66,30 82,30 82,46' fill='none' stroke='%23ffffff' stroke-width='10' stroke-linecap='round' stroke-linejoin='round'/></svg>" />
+  <link rel="stylesheet" href="styles.css?v=14" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-left">
+      <h1 class="brand">📈 股票交易跟踪系统</h1>
+      <span id="autoStatus" class="auto-status">自动更新：已开启</span>
+    </div>
+    <div class="topbar-right">
+      <button id="btnSettings" class="btn btn-settings" title="设置">⚙ 设置</button>
+      <span id="lastUpdate" class="last-update">尚未更新</span>
+      <button id="btnManualUpdate" class="btn btn-primary">手动更新</button>
+      <button id="btnToggleAuto" class="btn">暂停自动</button>
+    </div>
+  </header>
+
+  <div class="app-layout">
+    <button id="navToggle" class="nav-toggle" title="展开 / 收起导航">▸</button>
+    <div id="navOverlay" class="nav-overlay"></div>
+    <aside class="sidebar" id="sidebar">
+      <div class="side-brand">📈 交易跟踪</div>
+      <nav class="side-nav">
+        <a href="#/tracking" class="nav-item active" id="navTracking" data-view="tracking"><span class="nav-ico">📊</span>跟踪系统</a>
+        <a href="#/history" class="nav-item" id="navHistory" data-view="history"><span class="nav-ico">🕐</span>历史操作</a>
+        <a href="#/asset" class="nav-item" id="navAsset" data-view="asset"><span class="nav-ico">📈</span>资产分析</a>
+        <a href="#/closed" class="nav-item" id="navClosed" data-view="closed"><span class="nav-ico">🗂</span>清仓股票</a>
+        <a href="#/strategy" class="nav-item" id="navStrategy" data-view="strategy"><span class="nav-ico">🎯</span>策略管理</a>
+        <a href="#/backtest" class="nav-item" id="navBacktest" data-view="backtest"><span class="nav-ico">🔬</span>历史回测</a>
+      </nav>
+    </aside>
+    <main class="container">
+      <div id="viewTracking">
+
+    <!-- 统计概览 -->
+    <section class="stats-grid" id="statsGrid">
+      <div class="stat-card">
+        <div class="stat-label">组合 / 持仓</div>
+        <div class="stat-value"><span id="statCount">0</span><span class="stat-sep">/</span><span id="statHoldCount">0</span></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">仓位百分比</div>
+        <div class="stat-value" id="statPosition">0%</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">当前总资产</div>
+        <div class="stat-value" id="statTotalAsset">¥0.00</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">资产累计收益</div>
+        <div class="stat-value" id="statReturn">0.00%</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">今日资产涨跌</div>
+        <div class="stat-value" id="statToday">0.00%</div>
+      </div>
+    </section>
+
+    <!-- 工具栏 -->
+    <section class="toolbar">
+      <button id="btnAddStock" class="btn btn-accent">+ 添加股票</button>
+      <button id="btnOperations" class="btn">今日操作</button>
+      <div class="toolbar-spacer"></div>
+      <button id="btnBatchRemove" class="btn btn-sub" title="勾选多行后批量移除">批量移除</button>
+      <span id="batchSelBar" hidden>
+        <span class="batch-sel-hint">已选 <b id="batchSelCount">0</b> 只</span>
+        <button id="btnConfirmBatchRemove" class="btn btn-sub" style="color:#e74c3c" title="批量移除选中的股票">移除选中</button>
+        <button id="btnCancelBatch" class="btn btn-sub">取消</button>
+      </span>
+      <button id="btnDemo" class="btn btn-sub" title="填充一套示例数据（股票/操作/清仓）便于验证">示例数据</button>
+      <button id="btnDemoClear" class="btn btn-sub" title="清空当前全部业务数据">清空</button>
+      <input id="filterInput" class="filter-input" type="text" placeholder="按代码 / 名称筛选…" />
+    </section>
+
+    <!-- 最新操作提醒 -->
+    <section class="latest-alert" id="latestAlert" hidden>
+      <div class="alert-icon" id="alertIcon">🔔</div>
+      <div class="alert-body">
+        <div class="alert-title"><span id="alertTag" class="alert-tag">买入</span><span id="alertStock">—</span> · <span id="alertTime">—</span></div>
+        <div class="alert-detail" id="alertDetail">—</div>
+      </div>
+      <button class="alert-close" id="alertClose" title="收起">×</button>
+    </section>
+
+    <!-- 股票列表 -->
+    <section class="table-wrap">
+      <table class="stock-table" id="stockTable">
+        <thead>
+          <tr>
+            <th id="thBatchSel" class="th-check" style="width:28px"></th>
+            <th data-sort="code" class="sortable">代码 / 名称 <span class="sort-ind"></span></th>
+            <th data-sort="price" class="sortable">最新价 <span class="sort-ind"></span></th>
+            <th data-sort="today" class="sortable">今日涨跌 <span class="sort-ind"></span></th>
+            <th>信号</th>
+            <th data-sort="qty" class="sortable">余额 <span class="sort-ind"></span></th>
+            <th data-sort="avgCost" class="sortable">成本价 <span class="sort-ind"></span></th>
+            <th data-sort="pnlPct" class="sortable">盈亏比例 <span class="sort-ind"></span></th>
+            <th data-sort="pnl" class="sortable">盈亏 <span class="sort-ind"></span></th>
+            <th data-sort="marketValue" class="sortable">市值 <span class="sort-ind"></span></th>
+            <th data-sort="position" class="sortable">仓位 <span class="sort-ind"></span></th>
+            <th>纳入日收盘</th>
+            <th data-sort="cum" class="sortable">累计涨跌 <span class="sort-ind"></span></th>
+            <th data-sort="includeDate" class="sortable">纳入日期 <span class="sort-ind"></span></th>
+            <th>核心概念</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="stockTbody">
+          <tr class="empty-row"><td colspan="16">暂无跟踪股票，点击「+ 添加股票」开始。</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+      </div><!-- /viewTracking -->
+
+      <!-- 历史操作视图 -->
+      <div id="viewHistory" hidden>
+        <div class="page-head">
+          <h2>历史操作</h2>
+          <p class="page-sub">全部历史操作记录（含纳入股票池 / 买入 / 卖出）。</p>
+        </div>
+        <div class="history-filters">
+          <input id="histFilter" class="filter-input" type="text" placeholder="按代码 / 名称 / 备注筛选…" />
+          <select id="histType">
+            <option value="">全部类型</option>
+            <option value="add">纳入股票池</option>
+            <option value="buy">买入</option>
+            <option value="sell">卖出</option>
+            <option value="remove">移除</option>
+          </select>
+          <label class="hist-date">从 <input id="histDateFrom" type="date" /></label>
+          <label class="hist-date">到 <input id="histDateTo" type="date" /></label>
+          <span class="hist-date-tip">跨度 ≤ 1 个月</span>
+        </div>
+        <div id="historyList" class="history-list"></div>
+        <div id="historyPager" class="history-pager"></div>
+      </div>
+
+      <!-- 资产分析视图 -->
+      <div id="viewAssetAnalysis" hidden>
+        <div class="page-head">
+          <h2>资产分析</h2>
+          <p class="page-sub">基于当前仓位与初始资金测算的组合盈亏与收益率，并与沪深300对比。</p>
+        </div>
+        <section class="asset-stats">
+          <div class="stat-card">
+            <div class="stat-label">当前总资产</div>
+            <div class="stat-value" id="astTotal">¥0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label" id="astRangeLabel">区间盈亏</div>
+            <div class="stat-value" id="astRangePnl">¥0</div>
+            <div class="stat-sub" id="astRangePnlPct">0.00%</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">累计盈亏金额</div>
+            <div class="stat-value" id="astPnl">¥0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">累计收益率</div>
+            <div class="stat-value" id="astReturn">0.00%</div>
+          </div>
+        </section>
+        <section class="chart-card">
+          <div class="range-tabs" id="assetRangeTabs">
+            <button type="button" class="rtab" data-range="month">本月</button>
+            <button type="button" class="rtab" data-range="year">今年</button>
+            <button type="button" class="rtab" data-range="year1">近一年</button>
+            <button type="button" class="rtab active" data-range="all">全部</button>
+            <button type="button" class="rtab" data-range="custom">自定义</button>
+          </div>
+          <div class="range-custom" id="assetRangeCustom" hidden>
+            <label>从 <input id="assetFrom" type="date" /></label>
+            <label>到 <input id="assetTo" type="date" /></label>
+            <span class="hist-date-tip">结束日期取至今为止</span>
+          </div>
+          <div class="chart-legend">
+            <span class="lg lg-port">组合收益率</span>
+            <span class="lg lg-hsi">沪深300</span>
+            <span class="chart-range" id="astRange">—</span>
+          </div>
+          <div class="chart-box chart-box-lg"><canvas id="assetChart"></canvas></div>
+        </section>
+      </div>
+
+      <!-- 清仓股票视图 -->
+      <div id="viewClosed" hidden>
+        <div class="page-head">
+          <h2>清仓股票</h2>
+          <p class="page-sub">已清仓股票的盈亏情况（按盈亏金额大小排序）。点击条目查看历史买卖明细，并对比「实际频繁做T」与「从建仓持有到清仓不动」哪个更优。</p>
+        </div>
+        <div class="history-filters">
+          <label class="hist-date">从 <input id="clDateFrom" type="date" /></label>
+          <label class="hist-date">到 <input id="clDateTo" type="date" /></label>
+          <span class="hist-date-tip">按清仓日，跨度 ≤ 1 年</span>
+        </div>
+        <div id="closedSummary" class="closed-summary"></div>
+        <div id="closedList" class="closed-list"></div>
+        <div id="closedPager" class="history-pager"></div>
+      </div>
+
+      <!-- 策略管理视图 -->
+      <div id="viewStrategy" hidden>
+        <div class="page-head">
+          <h2>策略管理</h2>
+          <p class="page-sub">管理买卖策略。属性含「买入」「卖出-部分止盈」「卖出-清仓」；启用的策略会驱动信号评估，并在交易时段自动生成买入 / 卖出操作记录。</p>
+        </div>
+        <div class="strategy-toolbar">
+          <button id="btnAddStrategy" class="btn btn-accent">+ 新增策略</button>
+          <span class="hist-date-tip">买入策略仅无持仓时触发建仓；卖出策略仅持仓时触发交易（部分止盈每轮持仓只执行一次）。</span>
+        </div>
+        <div id="strategyManageList" class="strategy-manage-list"></div>
+      </div>
+
+      <!-- 历史回测视图 -->
+      <div id="viewBacktest" hidden>
+        <div class="page-head">
+          <h2>历史回测</h2>
+          <p class="page-sub">用真实历史日K逐日回放当前启用的策略，并按「日内分时撮合」成交：每天用真实开盘/最高/最低/收盘合成 5 分钟分时路径，盘中逐步评估策略（与实时系统口径一致：均线 = 历史日收盘 + 最新分时价），按分时价成交。买入固定总资产 1/20，资金不足时调仓卖出浮动盈亏最差的两只持仓（各 ≥ 买入额一半），卖出按部分止盈 / 清仓策略执行。</p>
+        </div>
+        <section class="backtest-config">
+          <div class="bt-config-left">
+            <div class="bt-config-title">选择回测股票</div>
+            <div id="btStockList" class="bt-stock-list"></div>
+          </div>
+          <div class="bt-config-right">
+            <div class="form-row">
+              <label>开始日期</label>
+              <input id="btFrom" type="date" />
+            </div>
+            <div class="form-row">
+              <label>结束日期</label>
+              <input id="btTo" type="date" />
+            </div>
+            <div class="form-row">
+              <label>初始资金（元）</label>
+              <input id="btCapital" type="number" step="1000" min="10000" />
+            </div>
+            <button id="btnRunBacktest" class="btn btn-accent">开始回测</button>
+          </div>
+        </section>
+        <div id="btLoading" class="bt-loading" hidden>正在拉取历史K线并回放策略…</div>
+        <section id="btResult" hidden>
+          <div class="bt-stat-grid">
+            <div class="stat-card">
+              <div class="stat-label">区间收益</div>
+              <div class="stat-value" id="btRet">0.00%</div>
+              <div class="stat-sub" id="btRange">—</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">年化收益率</div>
+              <div class="stat-value" id="btAnnual">0.00%</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">最大回撤</div>
+              <div class="stat-value" id="btMaxDD">0.00%</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">卖出胜率</div>
+              <div class="stat-value" id="btWinRate">0.0%</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">交易笔数（买 / 卖）</div>
+              <div class="stat-value"><span id="btTradeCount">0</span><span class="stat-sep">/</span><span id="btBuyCount">0</span><span class="stat-sep">/</span><span id="btSellCount">0</span></div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">期末资产（盈亏）</div>
+              <div class="stat-value" id="btFinalAsset">¥0</div>
+              <div class="stat-sub" id="btPnl">0.00%</div>
+            </div>
+          </div>
+          <section class="chart-card">
+            <div class="chart-legend">
+              <span class="lg lg-port">组合收益率</span>
+              <span class="lg lg-hsi">沪深300</span>
+              <span class="chart-range" id="btInitCap">初始资金 —</span>
+            </div>
+            <div class="chart-box chart-box-lg"><canvas id="btChart"></canvas></div>
+          </section>
+          <section class="table-wrap bt-trade-wrap">
+            <table class="stock-table">
+              <thead>
+                <tr>
+                  <th>日期</th>
+                  <th>股票</th>
+                  <th>方向</th>
+                  <th>股数</th>
+                  <th>价格</th>
+                  <th>金额</th>
+                  <th>实现盈亏</th>
+                  <th>备注</th>
+                </tr>
+              </thead>
+              <tbody id="btTrades"></tbody>
+            </table>
+          </section>
+        </section>
+      </div>
+    </main>
+  </div><!-- /app-layout -->
+
+  <!-- 添加股票 模态框 -->
+  <div class="modal" id="addModal">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h3>添加股票</h3>
+        <button class="modal-close" data-close="addModal">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row">
+          <label>股票代码</label>
+          <input id="addCode" type="text" placeholder="如 600519 或 sz000001" />
+          <select id="addMarket">
+            <option value="auto">自动识别</option>
+            <option value="sh">沪市 sh</option>
+            <option value="sz">深市 sz</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label>股票名称</label>
+          <input id="addName" type="text" placeholder="如 贵州茅台（可选，留空自动命名）" />
+        </div>
+        <div class="form-row">
+          <label>核心概念</label>
+          <input id="addConcept" type="text" placeholder="如 高端白酒 / 消费龙头" />
+        </div>
+        <div class="form-row">
+          <label>纳入日期</label>
+          <input id="addDate" type="date" />
+        </div>
+        <div class="form-row">
+          <label>纳入日收盘价</label>
+          <input id="addClose" type="number" step="0.01" placeholder="留空则按当前价计入" />
+        </div>
+        <div class="form-hint" id="addHint"></div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn" data-close="addModal">取消</button>
+        <button id="btnConfirmAdd" class="btn btn-accent">确认添加</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 研究 模态框 -->
+  <div class="modal" id="researchModal">
+    <div class="modal-card modal-card-lg">
+      <div class="modal-head">
+        <h3 id="researchTitle">研究</h3>
+        <button class="modal-close" data-close="researchModal">×</button>
+      </div>
+      <div class="modal-body" id="researchBody"></div>
+      <div class="modal-foot">
+        <button class="btn" data-close="researchModal">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 设置 模态框 -->
+  <div class="modal" id="settingsModal">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h3>设置</h3>
+        <button class="modal-close" data-close="settingsModal">×</button>
+      </div>
+      <div class="modal-body" id="settingsBody"></div>
+      <div class="modal-foot">
+        <button class="btn" data-close="settingsModal">取消</button>
+        <button id="btnSaveSettings" class="btn btn-accent">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 今日操作 模态框 -->
+  <div class="modal" id="opModal">
+    <div class="modal-card modal-card-lg">
+      <div class="modal-head">
+        <h3>今日操作</h3>
+        <button class="modal-close" data-close="opModal">×</button>
+      </div>
+      <div class="modal-body" id="opBody"></div>
+    </div>
+  </div>
+
+  <!-- 清仓股票详情 模态框 -->
+  <div class="modal" id="closedModal">
+    <div class="modal-card modal-card-lg">
+      <div class="modal-head">
+        <h3 id="closedTitle">清仓详情</h3>
+        <button class="modal-close" data-close="closedModal">×</button>
+      </div>
+      <div class="modal-body" id="closedBody"></div>
+      <div class="modal-foot">
+        <button class="btn" data-close="closedModal">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 策略编辑 模态框 -->
+  <div class="modal" id="strategyEditModal">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h3 id="strategyEditTitle">新增策略</h3>
+        <button class="modal-close" data-close="strategyEditModal">×</button>
+      </div>
+      <div class="modal-body" id="strategyEditBody"></div>
+      <div class="modal-foot">
+        <button class="btn" data-close="strategyEditModal">取消</button>
+        <button id="btnSaveStrategyEdit" class="btn btn-accent">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="toast"></div>
+
+  <script src="js/strategy.js"></script>
+  <script src="js/market.js"></script>
+  <script src="js/holding.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/demo.js"></script>
+  <script src="js/backtest.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
