@@ -1,5 +1,5 @@
 # server.py — 股票交易跟踪系统：静态托管 + 行情代理
-# 运行：python server.py  （默认端口 8080）
+# 运行：python server.py  （默认端口 8081）
 # 说明：
 #   - 浏览器直接请求行情接口会被 CORS 拦截，且新浪需 Referer、腾讯为 GBK 编码；
 #   - 本服务在服务端转发「东方财富」UTF-8 JSON 行情接口，绕过 CORS 并避免编码问题；
@@ -14,11 +14,17 @@ import re
 import sqlite3
 import sys
 import threading
-from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+from http.server import SimpleHTTPRequestHandler, HTTPServer
+try:
+    from http.server import ThreadingHTTPServer          # Python >= 3.7
+except ImportError:
+    from socketserver import ThreadingMixIn              # Python 3.6（CentOS 7 自带）
+    class ThreadingHTTPServer(ThreadingMixIn, HTTPServer):
+        daemon_threads = True
 from urllib.parse import urlparse, parse_qs
 from urllib.request import Request, urlopen
 
-PORT = int(os.environ.get('PORT', 8080))
+PORT = int(os.environ.get('PORT', 8081))
 ROOT = os.path.dirname(os.path.abspath(__file__))
 MAX_BODY = 20 * 1024 * 1024   # /api/state 请求体上限 20MB
 
@@ -329,7 +335,8 @@ def respond_json(resp, obj, status=200):
 
 class Handler(SimpleHTTPRequestHandler):
     def __init__(self, *a, **kw):
-        super().__init__(*a, directory=ROOT, **kw)
+        # 不传 directory 参数（Python 3.7 才支持），直接依赖启动时 os.chdir(ROOT) 作为工作目录
+        super().__init__(*a, **kw)
 
     def do_GET(self):
         u = urlparse(self.path)
@@ -398,7 +405,7 @@ class Handler(SimpleHTTPRequestHandler):
 
 if __name__ == '__main__':
     os.chdir(ROOT)
-    srv = ThreadingHTTPServer(('127.0.0.1', PORT), Handler)
+    srv = ThreadingHTTPServer(('0.0.0.0', PORT), Handler)   # 绑定全部网卡，公网可直连
     print('[stock-trade] server running at http://127.0.0.1:%d' % PORT, flush=True)
     try:
         srv.serve_forever()

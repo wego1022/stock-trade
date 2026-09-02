@@ -43,9 +43,9 @@ python server.py        # 或 python3 server.py
 node server.js
 ```
 
-启动后访问 <http://localhost:8080>。
+启动后访问 <http://localhost:8081>。
 
-> 注意：两种服务端口相同（默认 8080），不要同时启动，避免端口冲突。
+> 注意：两种服务端口相同（默认 8081），不要同时启动，避免端口冲突。
 
 ### 修改端口
 
@@ -56,7 +56,7 @@ PORT=9090 python server.py     # Linux/macOS
 $env:PORT=9090; python server.py   # Windows PowerShell
 ```
 
-## 部署到天翼云（CentOS，IP:8080 直连）
+## 部署到天翼云（CentOS，IP:8081 直连）
 
 `server.py` 仅用 Python 标准库，部署流程为：上传代码 → 装 Python → 常驻运行 → 放行端口。
 
@@ -83,7 +83,7 @@ After=network.target
 Type=simple
 WorkingDirectory=/opt/stock-trade
 ExecStart=/usr/bin/python3 /opt/stock-trade/server.py
-Environment=PORT=8080
+Environment=PORT=8081
 Restart=always
 RestartSec=3
 User=root
@@ -101,21 +101,21 @@ journalctl -u stock-trade -f      # 实时查看日志
 
 ### 4. 放行端口
 
-- **天翼云安全组**：控制台入方向放行 TCP 8080
+- **天翼云安全组**：控制台入方向放行 TCP 8081
 - **系统防火墙**：
 
 ```bash
-firewall-cmd --permanent --add-port=8080/tcp
+firewall-cmd --permanent --add-port=8081/tcp
 firewall-cmd --reload
 firewall-cmd --list-all
 ```
 
 ### 5. 验证
 
-浏览器访问 `http://<公网IP>:8080`。服务端行情代理依赖外网访问东方财富接口，可在服务器上自测：
+浏览器访问 `http://<公网IP>:8081`。服务端行情代理依赖外网访问东方财富接口，可在服务器上自测：
 
 ```bash
-curl -s "http://127.0.0.1:8080/api/quote?code=600519"
+curl -s "http://127.0.0.1:8081/api/quote?code=600519"
 ```
 
 ## 聚宽策略使用

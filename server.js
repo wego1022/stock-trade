@@ -1,5 +1,5 @@
 // server.js — 股票交易跟踪系统：静态托管 + 行情代理
-// 运行：node server.js  （默认端口 8080）
+// 运行：node server.js  （默认端口 8081）
 // 说明：
 //  - 前端浏览器直接请求腾讯/新浪行情会被 CORS 拦截，且新浪需 Referer、腾讯为 GBK 编码。
 //  - 本服务在服务端转发「东方财富」UTF-8 JSON 行情接口，绕过 CORS 并避免编码问题；
@@ -15,7 +15,7 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT || 8081;
 const ROOT = __dirname;
 
 // 东财 secid 前缀：沪市(6) -> 1.，深市(0/3) -> 0.，北交所(4/8) -> 0.
