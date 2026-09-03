@@ -67,6 +67,7 @@ window.ST = window.ST || {};
         <td><span class="concept" title="${esc(s.concept)}">${esc(s.concept)}</span></td>
         <td style="text-align:left">
           <button class="btn btn-sm btn-research" data-act="research">研究</button>
+          <button class="btn btn-sm btn-edit" data-act="edit">编辑</button>
           <button class="btn btn-sm btn-remove" data-act="remove">移除</button>
         </td>
       </tr>`;
@@ -162,10 +163,11 @@ window.ST = window.ST || {};
     const start = Math.max(0, allCloses.length - WINDOW);
     const closes = allCloses.slice(start);
 
-    // 历史 K 线（窗口内）
+    // 历史 K 线（窗口内）；prevClose 用于一字/十字线按相对昨收判定红绿
     const candles = closes.map((c, i) => {
       const g = start + i;
-      return { open: allOpens[g], close: c, high: allHighs[g], low: allLows[g] };
+      const prev = i > 0 ? closes[i - 1] : (start > 0 ? allCloses[start - 1] : null);
+      return { open: allOpens[g], close: c, high: allHighs[g], low: allLows[g], prevClose: prev };
     });
     // 今日动态 K 线：历史最后一根不是今天则追加一根；否则实时刷新最后一根
     const dates = stock.dailyDates || [];
@@ -183,7 +185,8 @@ window.ST = window.ST || {};
       candles.push({
         open: o, close: c,
         high: Math.max(o, c, stock.todayHigh || -1e9),
-        low: Math.min(o, c, stock.todayLow || 1e9)
+        low: Math.min(o, c, stock.todayLow || 1e9),
+        prevClose: prev
       });
     }
 
@@ -229,11 +232,14 @@ window.ST = window.ST || {};
     drawMA(strat.midMA, "#4aa8ff");
     drawMA(strat.longMA, "#b388ff");
 
-    // 蜡烛（红涨绿跌）
+    // 蜡烛（红涨绿跌）；一字/十字线（open==close）按相对昨收涨跌判定颜色
     const UP = "#ff4d4f", DOWN = "#27c93f";
+    const isUp = k => k.close > k.open
+      ? true
+      : (k.close < k.open ? false : (k.prevClose != null && k.close > k.prevClose));
     candles.forEach((k, i) => {
       const x = xAt(i);
-      const up = k.close >= k.open;
+      const up = isUp(k);
       const color = up ? UP : DOWN;
       // 影线
       ctx.strokeStyle = color; ctx.lineWidth = 1;
@@ -250,7 +256,7 @@ window.ST = window.ST || {};
     // 当前价标记（最后一根 K 右侧）
     const lastK = candles[n - 1];
     const lastY = yAt(lastK.close);
-    ctx.fillStyle = lastK.close >= lastK.open ? UP : DOWN;
+    ctx.fillStyle = isUp(lastK) ? UP : DOWN;
     ctx.beginPath(); ctx.arc(xAt(n - 1), lastY, 3.5, 0, Math.PI * 2); ctx.fill();
     ctx.font = "11px sans-serif"; ctx.textAlign = "left";
     ctx.fillText(stock.currentPrice.toFixed(2), xAt(n - 1) + 6, lastY + 4);
@@ -287,6 +293,11 @@ window.ST = window.ST || {};
         <div class="research-item"><div class="lbl">MA20 / MA60</div><div class="val" style="font-size:14px">${fmtPrice(stock.ma20)} / ${fmtPrice(stock.ma60)}</div></div>
         <div class="research-item"><div class="lbl">核心概念</div><div class="val" style="font-size:13px;font-weight:400">${esc(stock.concept)}</div></div>
         <div class="research-item"><div class="lbl">纳入日期</div><div class="val" style="font-size:13px;font-weight:400">${esc(stock.includeDate)} · 仓位 ${(stock.position||0).toFixed(0)}%</div></div>
+      </div>
+
+      <div class="research-section">
+        <h4>加入原因 / 备注</h4>
+        <div class="research-note">${stock.note ? esc(stock.note) : '<span class="dim">暂无备注，可在列表中点击「编辑」添加。</span>'}</div>
       </div>
 
       <div class="research-section">

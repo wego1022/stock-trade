@@ -6,7 +6,7 @@
     "stopLoss": 8,
     "takeProfit": 25,
     "breakoutRatio": 0.01,
-    "autoUpdate": true,
+    "autoUpdate": false,
     "intervalSec": 60
   },
   "st.strategies.v1": [

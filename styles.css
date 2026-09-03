@@ -412,6 +412,8 @@ body.nav-open .nav-toggle { left: 200px; }
 .btn-research:hover { background: rgba(74,168,255,.25); }
 .btn-remove { background: rgba(255,77,79,.12); border-color: rgba(255,77,79,.4); color: var(--up); }
 .btn-remove:hover { background: rgba(255,77,79,.22); }
+.btn-edit { background: rgba(255,176,32,.12); border-color: rgba(255,176,32,.4); color: var(--warn); }
+.btn-edit:hover { background: rgba(255,176,32,.22); }
 
 /* 表格 */
 .table-wrap {
@@ -534,6 +536,11 @@ body.nav-open .nav-toggle { left: 200px; }
 
 .form-row { display: grid; grid-template-columns: 110px 1fr; gap: 10px; align-items: center; margin-bottom: 12px; }
 .form-row label { color: var(--text-dim); font-size: 13px; }
+.form-row textarea {
+  width: 100%; background: var(--bg-2); border: 1px solid var(--border); border-radius: 8px;
+  color: var(--text); font-size: 13px; padding: 8px 10px; font-family: inherit; line-height: 1.6; resize: vertical;
+}
+.form-row textarea:focus { outline: none; border-color: var(--accent); }
 .form-row input, .form-row select {
   background: var(--bg-2);
   border: 1px solid var(--border);
@@ -566,6 +573,12 @@ body.nav-open .nav-toggle { left: 200px; }
 }
 .chart-sw-btn:hover { color: var(--accent); border-color: var(--accent); }
 .chart-sw-btn.active { background: rgba(74,168,255,.14); color: var(--accent); border-color: var(--accent); }
+.research-note {
+  background: var(--bg-2); border: 1px solid var(--border); border-radius: 8px;
+  padding: 10px 12px; font-size: 13px; color: var(--text); line-height: 1.7;
+  white-space: pre-wrap; word-break: break-word;
+}
+.research-note .dim { color: var(--text-mute); }
 .chart-box { background: var(--bg-2); border: 1px solid var(--border); border-radius: 8px; padding: 10px; }
 .chart-box canvas { width: 100%; height: 220px; display: block; }
 .basis-box {

@@ -357,11 +357,39 @@
           <label>纳入日收盘价</label>
           <input id="addClose" type="number" step="0.01" placeholder="留空则按当前价计入" />
         </div>
+        <div class="form-row">
+          <label>加入原因 / 备注</label>
+          <textarea id="addNote" rows="3" placeholder="记录加入股票池的原因、逻辑、观察要点等（可在研究弹窗查看）"></textarea>
+        </div>
         <div class="form-hint" id="addHint"></div>
       </div>
       <div class="modal-foot">
         <button class="btn" data-close="addModal">取消</button>
         <button id="btnConfirmAdd" class="btn btn-accent">确认添加</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 编辑股票 模态框 -->
+  <div class="modal" id="editModal">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h3 id="editTitle">编辑股票</h3>
+        <button class="modal-close" data-close="editModal">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row">
+          <label>核心概念</label>
+          <input id="editConcept" type="text" placeholder="如 高端白酒 / 消费龙头" />
+        </div>
+        <div class="form-row">
+          <label>加入原因 / 备注</label>
+          <textarea id="editNote" rows="4" placeholder="记录加入股票池的原因、逻辑、观察要点等"></textarea>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn" data-close="editModal">取消</button>
+        <button id="btnConfirmEdit" class="btn btn-accent">保存修改</button>
       </div>
     </div>
   </div>

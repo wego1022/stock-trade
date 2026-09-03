@@ -153,6 +153,7 @@ window.ST = window.ST || {};
       market: market,
       name: name,
       concept: concept,
+      note: (params.note || "").toString(),
       includeDate: params.includeDate || todayStr(),
       includeClose: round2(includeClose),
       _includeCloseManual: includeCloseManual,

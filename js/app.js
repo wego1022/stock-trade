@@ -277,6 +277,7 @@ window.ST = window.ST || {};
     document.getElementById("addCode").value = "";
     document.getElementById("addName").value = "";
     document.getElementById("addConcept").value = "";
+    document.getElementById("addNote").value = "";
     document.getElementById("addClose").value = "";
     document.getElementById("addMarket").value = "auto";
     document.getElementById("addDate").value = ST.Market.todayStr();
@@ -301,6 +302,7 @@ window.ST = window.ST || {};
       market: parsed.market,
       name: document.getElementById("addName").value,
       concept: document.getElementById("addConcept").value,
+      note: document.getElementById("addNote").value,
       includeDate: document.getElementById("addDate").value || ST.Market.todayStr(),
       includeClose: document.getElementById("addClose").value
     });
@@ -395,6 +397,29 @@ window.ST = window.ST || {};
     if (!s) return;
     ST.UI.renderResearch(s, strat);
     openModal("researchModal");
+  }
+
+  // 编辑股票（核心概念 / 备注）
+  let editId = "";
+  function editStock(id) {
+    const s = stocks.find(x => x.id === id);
+    if (!s) return;
+    editId = id;
+    document.getElementById("editTitle").textContent = `编辑 ${s.name} (${s.code})`;
+    document.getElementById("editConcept").value = s.concept || "";
+    document.getElementById("editNote").value = s.note || "";
+    openModal("editModal");
+    setTimeout(() => document.getElementById("editConcept").focus(), 50);
+  }
+  function confirmEdit() {
+    const s = stocks.find(x => x.id === editId);
+    if (!s) return;
+    s.concept = document.getElementById("editConcept").value.trim();
+    s.note = document.getElementById("editNote").value.trim();
+    saveAll();
+    renderAll();
+    closeModal("editModal");
+    ST.UI.toast("已保存修改", "success");
   }
 
   // ---- 策略管理 ----
@@ -507,6 +532,7 @@ window.ST = window.ST || {};
     document.getElementById("btnAddStock").addEventListener("click", openAdd);
     document.getElementById("addCode").addEventListener("input", onAddCodeInput);
     document.getElementById("btnConfirmAdd").addEventListener("click", confirmAdd);
+    document.getElementById("btnConfirmEdit").addEventListener("click", confirmEdit);
     // 策略管理
     document.getElementById("btnAddStrategy").addEventListener("click", openStrategyAdd);
     document.getElementById("btnSaveStrategyEdit").addEventListener("click", saveStrategyEdit);
@@ -575,6 +601,7 @@ window.ST = window.ST || {};
       const id = tr.getAttribute("data-id");
       const act = btn.getAttribute("data-act");
       if (act === "research") researchStock(id);
+      else if (act === "edit") editStock(id);
       else if (act === "remove") removeStock(id);
     });
 
