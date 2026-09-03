@@ -206,13 +206,15 @@ window.ST = window.ST || {};
     return raised;
   }
 
-  // 是否处于交易时段：周一至周五 9:10 ~ 15:00
+  // 是否处于交易时段：周一至周五 9:30-11:30、13:00-15:00（A股连续竞价时段，买卖仅在此时段触发）
   function isTradingSession() {
     const d = new Date();
     const day = d.getDay();
     if (day === 0 || day === 6) return false; // 周末
     const mins = d.getHours() * 60 + d.getMinutes();
-    return mins >= 9 * 60 + 10 && mins < 15 * 60; // 9:10 ~ 15:00
+    const am = mins >= 9 * 60 + 25 && mins < 11 * 60 + 30; // 9:25 ~ 11:30
+    const pm = mins >= 13 * 60 && mins < 15 * 60;          // 13:00 ~ 15:00
+    return am || pm;
   }
   // 交易日 + 是否开盘（用于状态文案）
   function sessionDesc() {

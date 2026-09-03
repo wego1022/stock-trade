@@ -6,7 +6,7 @@
     "stopLoss": 8,
     "takeProfit": 25,
     "breakoutRatio": 0.01,
-    "autoUpdate": false,
+    "autoUpdate": true,
     "intervalSec": 60
   },
   "st.strategies.v1": [
@@ -27,7 +27,7 @@
       "id": "buy_dip",
       "name": "回踩低吸买入",
       "attr": "buy",
-      "enabled": false,
+      "enabled": true,
       "params": {
         "mode": "dip",
         "shortMA": 5,

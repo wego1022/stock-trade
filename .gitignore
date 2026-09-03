@@ -1,0 +1,2 @@
+# SQLite 数据库（业务数据），不同步到 github
+data.db*
