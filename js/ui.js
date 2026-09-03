@@ -20,6 +20,7 @@ window.ST = window.ST || {};
       .replace(/"/g, "&quot;");
   }
   const SIGNAL_TEXT = { buy: "买入", hold: "持有", watch: "观望", sell: "卖出" };
+  let chartWindow = 90;   // 研究弹窗 K 线窗口（90/180 日），跨打开保持
 
   // 渲染列表（batch=true 时显示勾选列，用于批量移除）
   function renderTable(stocks, strat, sortState) {
@@ -140,8 +141,8 @@ window.ST = window.ST || {};
     if (colorCls) el.classList.add(colorCls);
   }
 
-  // 研究：图表绘制
-  function drawChart(canvas, stock, strat) {
+  // 研究：K 线蜡烛图绘制（红涨绿跌，中国惯例；叠加均线与当前价标记）
+  function drawChart(canvas, stock, strat, windowDays) {
     if (!canvas) return;
     const dpr = window.devicePixelRatio || 1;
     const w = canvas.clientWidth, h = canvas.clientHeight;
@@ -150,17 +151,56 @@ window.ST = window.ST || {};
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, w, h);
 
-    const series = (stock.series || stock.dailyCloses || []).slice();
-    if (!series.length) return;
+    const allCloses = (stock.dailyCloses || stock.series || []).slice();
+    if (!allCloses.length) return;
+    const allOpens = (stock.dailyOpens || allCloses).slice();
+    const allHighs = (stock.dailyHighs || allCloses).slice();
+    const allLows = (stock.dailyLows || allCloses).slice();
+
+    // 只显示最近 WINDOW 根，避免过密（可切换 90/180）
+    const WINDOW = Math.min(windowDays || 90, allCloses.length);
+    const start = Math.max(0, allCloses.length - WINDOW);
+    const closes = allCloses.slice(start);
+
+    // 历史 K 线（窗口内）
+    const candles = closes.map((c, i) => {
+      const g = start + i;
+      return { open: allOpens[g], close: c, high: allHighs[g], low: allLows[g] };
+    });
+    // 今日动态 K 线：历史最后一根不是今天则追加一根；否则实时刷新最后一根
+    const dates = stock.dailyDates || [];
+    const lastDate = dates.length ? dates[dates.length - 1] : "";
+    if (lastDate === ST.Market.todayStr()) {
+      const last = candles[candles.length - 1];
+      last.open = stock.todayOpen || last.open;
+      last.close = stock.currentPrice;
+      last.high = Math.max(last.high, stock.todayHigh || -1e9, stock.currentPrice);
+      last.low = Math.min(last.low, stock.todayLow || 1e9, stock.currentPrice);
+    } else {
+      const prev = closes[closes.length - 1];
+      const o = stock.todayOpen || prev;
+      const c = stock.currentPrice;
+      candles.push({
+        open: o, close: c,
+        high: Math.max(o, c, stock.todayHigh || -1e9),
+        low: Math.min(o, c, stock.todayLow || 1e9)
+      });
+    }
+
     const padL = 8, padR = 56, padT = 12, padB = 20;
-    const min = Math.min.apply(null, series);
-    const max = Math.max.apply(null, series);
+    let min = Infinity, max = -Infinity;
+    for (const k of candles) {
+      if (k.high > max) max = k.high;
+      if (k.low < min) min = k.low;
+    }
     const span = (max - min) || 1;
     const lo = min - span * 0.08, hi = max + span * 0.08;
     const rng = hi - lo;
-    const n = series.length;
-    const xAt = i => padL + (i / (n - 1)) * (w - padL - padR);
+    const n = candles.length;
+    const step = (w - padL - padR) / n;
+    const xAt = i => padL + step * i + step / 2;
     const yAt = v => padT + (1 - (v - lo) / rng) * (h - padT - padB);
+    const bodyW = Math.max(3, step * 0.62);
 
     // 网格
     ctx.strokeStyle = "rgba(255,255,255,.06)";
@@ -170,14 +210,15 @@ window.ST = window.ST || {};
       ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(w - padR, y); ctx.stroke();
     }
 
-    // 均线
+    // 均线（基于完整日收盘序列，与交易软件口径一致；映射到窗口坐标）
     function drawMA(period, color) {
       const pts = [];
-      for (let i = 0; i < n; i++) {
-        if (i < period - 1) continue;
+      for (let wi = 0; wi < closes.length; wi++) {
+        const g = start + wi;
+        if (g < period - 1) continue;
         let sum = 0;
-        for (let j = i - period + 1; j <= i; j++) sum += series[j];
-        pts.push([xAt(i), yAt(sum / period)]);
+        for (let j = g - period + 1; j <= g; j++) sum += allCloses[j];
+        pts.push([xAt(wi), yAt(sum / period)]);
       }
       if (!pts.length) return;
       ctx.strokeStyle = color; ctx.lineWidth = 1.2; ctx.beginPath();
@@ -188,19 +229,31 @@ window.ST = window.ST || {};
     drawMA(strat.midMA, "#4aa8ff");
     drawMA(strat.longMA, "#b388ff");
 
-    // 价格线
-    ctx.strokeStyle = "#e6ebf5"; ctx.lineWidth = 1.8; ctx.beginPath();
-    series.forEach((v, i) => { const x = xAt(i), y = yAt(v); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
-    ctx.stroke();
+    // 蜡烛（红涨绿跌）
+    const UP = "#ff4d4f", DOWN = "#27c93f";
+    candles.forEach((k, i) => {
+      const x = xAt(i);
+      const up = k.close >= k.open;
+      const color = up ? UP : DOWN;
+      // 影线
+      ctx.strokeStyle = color; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(x, yAt(k.high)); ctx.lineTo(x, yAt(k.low)); ctx.stroke();
+      // 实体
+      const yO = yAt(k.open), yC = yAt(k.close);
+      const top = Math.min(yO, yC);
+      const bh = Math.max(1, Math.abs(yO - yC));
+      ctx.fillStyle = color;
+      ctx.fillRect(x - bodyW / 2, top, bodyW, bh);
+      if (up) { ctx.strokeRect(x - bodyW / 2, top, bodyW, bh); }
+    });
 
-    // 当前价点
-    const lastX = xAt(n - 1), lastY = yAt(series[n - 1]);
-    const up = series[n - 1] >= (stock.includeClose);
-    const dotColor = up ? "#ff4d4f" : "#27c93f";
-    ctx.fillStyle = dotColor;
-    ctx.beginPath(); ctx.arc(lastX, lastY, 3.5, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = dotColor; ctx.font = "11px sans-serif"; ctx.textAlign = "left";
-    ctx.fillText(stock.currentPrice.toFixed(2), lastX + 6, lastY + 4);
+    // 当前价标记（最后一根 K 右侧）
+    const lastK = candles[n - 1];
+    const lastY = yAt(lastK.close);
+    ctx.fillStyle = lastK.close >= lastK.open ? UP : DOWN;
+    ctx.beginPath(); ctx.arc(xAt(n - 1), lastY, 3.5, 0, Math.PI * 2); ctx.fill();
+    ctx.font = "11px sans-serif"; ctx.textAlign = "left";
+    ctx.fillText(stock.currentPrice.toFixed(2), xAt(n - 1) + 6, lastY + 4);
 
     // 纳入价参考线
     if (stock.includeClose >= lo && stock.includeClose <= hi) {
@@ -237,7 +290,12 @@ window.ST = window.ST || {};
       </div>
 
       <div class="research-section">
-        <h4>近 ${stock.dailyCloses.length} 日价格走势</h4>
+        <h4 class="chart-head">近 <span id="researchChartDays">${Math.min(stock.dailyCloses.length, chartWindow)}</span> 日 K 线走势
+          <span class="chart-switch">
+            <button type="button" class="chart-sw-btn ${chartWindow === 90 ? 'active' : ''}" data-win="90">90日</button>
+            <button type="button" class="chart-sw-btn ${chartWindow === 180 ? 'active' : ''}" data-win="180">180日</button>
+          </span>
+        </h4>
         <div class="chart-box"><canvas id="researchChart"></canvas></div>
       </div>
 
@@ -249,7 +307,19 @@ window.ST = window.ST || {};
 
     // 绘制图表（延迟一帧确保 canvas 已布局）
     requestAnimationFrame(() => {
-      drawChart(document.getElementById("researchChart"), stock, strat);
+      drawChart(document.getElementById("researchChart"), stock, strat, chartWindow);
+    });
+
+    // K 线窗口切换（90/180 日）
+    document.querySelectorAll(".chart-sw-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        chartWindow = Number(btn.dataset.win) || 90;
+        document.querySelectorAll(".chart-sw-btn").forEach(b => b.classList.toggle("active", b === btn));
+        document.getElementById("researchChartDays").textContent = Math.min(stock.dailyCloses.length, chartWindow);
+        requestAnimationFrame(() => {
+          drawChart(document.getElementById("researchChart"), stock, strat, chartWindow);
+        });
+      });
     });
   }
 

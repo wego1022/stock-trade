@@ -92,7 +92,8 @@ window.ST = window.ST || {};
   function recompute(stock) {
     const closes = stock.dailyCloses || [];
     const prevClose = closes.length ? closes[closes.length - 1] : stock.currentPrice;
-    const series = closes.concat([stock.currentPrice]);
+    // 纯日收盘序列：均线/信号与交易软件口径一致（不含盘中实时价，实时价仅用于价格线与突破判断）
+    const series = closes.slice();
 
     const todayChange = round4(stock.currentPrice - prevClose);
     const todayChangePct = prevClose ? round4(todayChange / prevClose * 100) : 0;
@@ -108,7 +109,7 @@ window.ST = window.ST || {};
     stock.ma10 = ma(series, 10);
     stock.ma20 = ma(series, 20);
     stock.ma60 = ma(series, 60);
-    stock.series = series; // 供图表使用
+    stock.series = series; // 供图表/信号使用（日收盘序列）
   }
 
   // 创建股票对象
@@ -123,6 +124,7 @@ window.ST = window.ST || {};
     const concept = (params.concept && params.concept.trim()) || (preset ? preset[1] : "—");
 
     let includeClose = parseFloat(params.includeClose);
+    const includeCloseManual = includeClose > 0;   // 用户是否手动指定纳入价
     if (!(includeClose > 0)) {
       // 预设给一个合理基准价，否则随机 12~88
       const base = preset ? ({
@@ -135,6 +137,16 @@ window.ST = window.ST || {};
     const dailyCloses = genHistory(includeClose, HISTORY_DAYS);
     const currentPrice = includeClose;
 
+    // 由收盘序列派生模拟 OHLC（开/高/低），供 K 线蜡烛图使用
+    const dailyOpens = [], dailyHighs = [], dailyLows = [];
+    dailyCloses.forEach((c, i) => {
+      const prev = i === 0 ? c : dailyCloses[i - 1];
+      const open = round2(prev * (1 + gaussian() * 0.004));
+      dailyOpens.push(open);
+      dailyHighs.push(round2(Math.max(open, c) * (1 + Math.abs(gaussian()) * 0.004)));
+      dailyLows.push(round2(Math.min(open, c) * (1 - Math.abs(gaussian()) * 0.004)));
+    });
+
     const stock = {
       id: market + code,
       code: code,
@@ -143,8 +155,12 @@ window.ST = window.ST || {};
       concept: concept,
       includeDate: params.includeDate || todayStr(),
       includeClose: round2(includeClose),
+      _includeCloseManual: includeCloseManual,
       position: clampNum(params.position, 0, 100, 0),
       dailyCloses: dailyCloses,
+      dailyOpens: dailyOpens,
+      dailyHighs: dailyHighs,
+      dailyLows: dailyLows,
       currentPrice: round2(currentPrice),
       createdAt: Date.now()
     };
@@ -190,15 +206,18 @@ window.ST = window.ST || {};
     const j = await res.json();
     return (j && j.quotes) || [];
   }
-  // 用单条实时行情更新股票（价格 / 昨收 / 名称），并重算均线与涨跌
+  // 用单条实时行情更新股票（价格 / 昨收 / 今日开高低 / 名称），并重算均线与涨跌
   function applyQuote(stock, q) {
     if (!q) return;
     if (q.name) stock.name = q.name;
     if (isFinite(q.prevClose) && q.prevClose > 0) stock.prevClose = Math.round(q.prevClose * 100) / 100;
     if (isFinite(q.price) && q.price > 0) stock.currentPrice = Math.round(q.price * 100) / 100;
+    if (isFinite(q.open) && q.open > 0) stock.todayOpen = Math.round(q.open * 100) / 100;
+    if (isFinite(q.high) && q.high > 0) stock.todayHigh = Math.round(q.high * 100) / 100;
+    if (isFinite(q.low) && q.low > 0) stock.todayLow = Math.round(q.low * 100) / 100;
     recompute(stock);
   }
-  // 拉取真实日 K 收盘序列，重建 dailyCloses（用于真实均线 / 走势图）
+  // 拉取真实日 K（含 OHLC 与日期），重建 daily 序列（用于真实均线 / K 线走势图）
   async function hydrateKlines(stock) {
     try {
       const res = await fetch('/api/kline?code=' + encodeURIComponent(stock.code));
@@ -206,8 +225,17 @@ window.ST = window.ST || {};
       const j = await res.json();
       if (j.closes && j.closes.length > 10) {
         stock.dailyCloses = j.closes.map(c => Math.round(c * 100) / 100);
-        // 纳入收盘价：用户未填（<=0）时，用序列最早收盘作为参考基准
-        if (!(stock.includeClose > 0)) stock.includeClose = stock.dailyCloses[0];
+        stock.dailyOpens = (j.opens || j.closes).map(v => Math.round(v * 100) / 100);
+        stock.dailyHighs = (j.highs || j.closes).map(v => Math.round(v * 100) / 100);
+        stock.dailyLows = (j.lows || j.closes).map(v => Math.round(v * 100) / 100);
+        stock.dailyDates = (j.dates || []);
+        const lastClose = stock.dailyCloses[stock.dailyCloses.length - 1];
+        const manualInclude = stock._includeCloseManual === true;   // 用户手动指定的纳入价
+        const stalePrice = !(stock.currentPrice > 0) || stock.currentPrice === stock.includeClose; // 现价仍是创建基准价
+        // 纳入基准：预设基准价与真实价偏差大，非用户指定时改用最新收盘，避免累计涨跌异常
+        if (!manualInclude) stock.includeClose = lastClose;
+        // 现价仍为创建基准价（尚未接实时行情）时，用最新收盘兜底，保证均线与走势图正确
+        if (stalePrice) stock.currentPrice = lastClose;
         recompute(stock);
       }
     } catch (e) { /* 失败则保留模拟 K 线 */ }

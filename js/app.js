@@ -818,11 +818,21 @@ window.ST = window.ST || {};
     // 先等服务端数据同步完成（失败也立即返回，本地模式可用），再读取并渲染
     ST.Storage.ensureLoaded().then(() => {
       stocks = ST.Storage.getStocks();
+      // 校准已有股票的均线/序列（MA 改为纯日收盘口径，与交易软件一致）
+      stocks.forEach(s => {
+        if (s && s.dailyCloses && s.dailyCloses.length) { try { ST.Market.recompute(s); } catch (e) { } }
+      });
       strat = ST.Storage.getStrategy();
       strategies = ST.Storage.getStrategies();
       seedIfEmpty();
       bind();
       renderAll();
+      // 补齐历史 OHLC（K 线蜡烛图需要）：旧数据无 OHLC 时补拉一次，成功后持久化
+      stocks.forEach(s => {
+        if (s && s.code && !(s.dailyOpens && s.dailyOpens.length)) {
+          ST.Market.hydrateKlines(s).then(() => saveAll()).catch(() => { });
+        }
+      });
       loadLatestAlert();
       updateAutoStatus();
       updateLastUpdate();

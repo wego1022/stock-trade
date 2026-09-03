@@ -194,6 +194,9 @@ def fetch_quote(code):
         'name': parts[1],
         'price': price,
         'prevClose': prev,
+        'open': num(5, None),
+        'high': num(33, None),
+        'low': num(34, None),
         'change': num(31, None),
         'changePct': num(32, None)
     }
