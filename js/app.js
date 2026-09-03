@@ -495,32 +495,6 @@ window.ST = window.ST || {};
     ST.UI.renderOperationModal(ST.Storage.getOperations(), stocks);
   }
 
-  // 首次使用：注入示例股票
-  function seedIfEmpty() {
-    if (stocks.length === 0 && !ST.Storage.getMeta().seeded) {
-      const samples = [
-        { code: "600519", concept: "高端白酒/消费龙头", position: 25 },
-        { code: "300750", concept: "动力电池龙头", position: 20 },
-        { code: "601318", concept: "保险/金融龙头", position: 15 }
-      ];
-      samples.forEach(p => {
-        const s = ST.Market.createStock({
-          code: p.code, market: "auto", concept: p.concept,
-          includeDate: daysAgoStr(30), position: p.position
-        });
-        if (s) { s.includeDate = daysAgoStr(30); stocks.push(s); }
-      });
-      ST.Storage.saveStocks(stocks);
-      ST.Storage.saveMeta({ seeded: true });
-    }
-  }
-  function daysAgoStr(n) {
-    const d = new Date(); d.setDate(d.getDate() - n);
-    const m = String(d.getMonth() + 1).padStart(2, "0");
-    const day = String(d.getDate()).padStart(2, "0");
-    return d.getFullYear() + "-" + m + "-" + day;
-  }
-
   // 事件绑定
   function bind() {
     document.getElementById("btnManualUpdate").addEventListener("click", () => refreshPrices(false));
@@ -670,19 +644,6 @@ window.ST = window.ST || {};
       ST.UI.setClosedFilter({ from: e.target.value, to: document.getElementById("clDateTo").value }));
     document.getElementById("clDateTo").addEventListener("change", e =>
       ST.UI.setClosedFilter({ from: document.getElementById("clDateFrom").value, to: e.target.value }));
-    // 示例数据 / 清空
-    document.getElementById("btnDemo").addEventListener("click", () => {
-      if (!confirm("将清空当前数据并填充一套示例数据，继续？")) return;
-      const r = ST.Demo.load();
-      window.location.hash = "#/tracking";
-      window.location.reload();
-      setTimeout(() => ST.UI.toast?.(`已填充 ${r.stocks} 只股票、${r.ops} 条操作示例数据`, "success"), 300);
-    });
-    document.getElementById("btnDemoClear").addEventListener("click", () => {
-      if (!confirm("确认清空全部业务数据？此操作不可恢复。")) return;
-      ST.Demo.clear();
-      window.location.reload();
-    });
   }
 
   // 设置抽屉开关状态
@@ -824,7 +785,6 @@ window.ST = window.ST || {};
       });
       strat = ST.Storage.getStrategy();
       strategies = ST.Storage.getStrategies();
-      seedIfEmpty();
       bind();
       renderAll();
       // 补齐历史 OHLC（K 线蜡烛图需要）：旧数据无 OHLC 时补拉一次，成功后持久化

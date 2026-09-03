@@ -127,18 +127,6 @@ window.ST = window.ST || {};
     return loadPromise;
   }
 
-  // 清空指定 key 的业务数据（本地 + 服务端），keys 缺省时清全部
-  async function clearAll(keys) {
-    const list = keys || ALL_KEYS;
-    list.forEach(k => {
-      delete cache[k];
-      try { localStorage.removeItem(k); } catch (e) { }
-    });
-    try {
-      await fetch("/api/state", { method: "DELETE" });
-    } catch (e) { }
-  }
-
   // ---------- 对外接口（与旧版保持一致） ----------
   ST.Storage = {
     ensureLoaded,
@@ -201,7 +189,6 @@ window.ST = window.ST || {};
     savePortfolioConfig(cfg) {
       return write(KEY_PORTFOLIO, cfg || {});
     },
-    clearAll,
     _defaults: DEFAULT_STRATEGY
   };
 })(window.ST);
