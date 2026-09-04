@@ -77,6 +77,7 @@ window.ST = window.ST || {};
       const holding = (h.qty || 0) > 0;
       const price = s.currentPrice;
       const cum = s.cumChangePct || 0;
+      const pos = holding ? ((price - h.avgCost) / h.avgCost * 100) : cum; // 持仓口径累计涨跌
 
       if (!holding) {
         // ---- 买入预警（未持仓）----
@@ -123,22 +124,24 @@ window.ST = window.ST || {};
         strategies.forEach(st => {
           if (st.attr === "sell_partial") {
             const g = (st.params && st.params.gainPct != null) ? st.params.gainPct : 25;
-            const gap = g - cum;
+            const gap = g - pos;
             if (gap >= 0 && gap <= NEAR_CUM_PCT) {
               warns.push({
                 s, cat: "卖出", tag: "接近止盈",
-                text: `累计涨幅 ${signPct(cum)}，距「${st.name}」止盈线 ${g}% 仅差 ${gap.toFixed(2)}%`
+                text: `持仓涨幅 ${signPct(pos)}，距「${st.name}」止盈线 ${g}% 仅差 ${gap.toFixed(2)}%`,
+                pctNote: `持仓 ${signPct(pos)}`
               });
             }
           } else if (st.attr === "sell_all") {
             const p = st.params || {};
             if (p.mode === "stoploss") {
               const loss = Math.abs(p.lossPct != null ? p.lossPct : 8);
-              const gap = cum - (-loss);
+              const gap = pos - (-loss);
               if (gap >= 0 && gap <= NEAR_CUM_PCT) {
                 warns.push({
                   s, cat: "卖出", tag: "接近止损",
-                  text: `累计跌幅 ${signPct(cum)}，距「${st.name}」止损线 -${loss}% 仅差 ${gap.toFixed(2)}%`
+                  text: `持仓跌幅 ${signPct(pos)}，距「${st.name}」止损线 -${loss}% 仅差 ${gap.toFixed(2)}%`,
+                  pctNote: `持仓 ${signPct(pos)}`
                 });
               }
             } else {
@@ -241,7 +244,7 @@ window.ST = window.ST || {};
         <span class="am-tag ${tagCls}">${esc(w.tag)}</span>
         <span class="op-stock">${esc(w.s.name)} (${esc(w.s.code)})</span>
         <span class="am-basis">${esc(w.text)}</span>
-        <span class="op-note">累计 ${signPct(w.s.cumChangePct)} · 现价 ${r2(w.s.currentPrice)}</span>
+        <span class="op-note">${w.pctNote || ("累计 " + signPct(w.s.cumChangePct))} · 现价 ${r2(w.s.currentPrice)}</span>
       </div>`;
     }).join("");
   }

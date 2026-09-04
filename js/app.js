@@ -826,6 +826,9 @@ window.ST = window.ST || {};
       updateAutoStatus();
       updateLastUpdate();
       restartTimer();
+      // 初始化后立即拉一次真实行情（含真实昨收），
+      // 让「今日涨跌」基于上一交易日收盘计算，而非沿用旧的错误昨收（=纳入价）。
+      refreshPrices(true);
       route(); // 初始化左侧路由视图
       updateNavToggle(); // 侧边导航默认收起
     });

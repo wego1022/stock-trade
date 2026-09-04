@@ -91,7 +91,20 @@ window.ST = window.ST || {};
   // 重新计算一只股票的派生字段
   function recompute(stock) {
     const closes = stock.dailyCloses || [];
-    const prevClose = closes.length ? closes[closes.length - 1] : stock.currentPrice;
+    // 昨收：优先用行情接口返回的真实昨收（_realPrevClose，即上一交易日收盘）。
+    // 不能直接取日K序列最后一根——日K最后一根可能是当日实时蜡烛，
+    // 模拟序列末端也可能等于纳入价，都会导致「今日涨跌」被算成「累计涨跌」。
+    let prevClose = stock._realPrevClose;
+    if (!(prevClose > 0)) {
+      const dates = stock.dailyDates || [];
+      const lastDate = dates.length ? dates[dates.length - 1] : "";
+      if (lastDate === todayStr()) {
+        // 日K最后一根是今日实时蜡烛，昨收取上一根收盘
+        prevClose = closes.length > 1 ? closes[closes.length - 2] : (closes[closes.length - 1] || stock.currentPrice);
+      } else {
+        prevClose = closes.length ? closes[closes.length - 1] : stock.currentPrice;
+      }
+    }
     // 纯日收盘序列：均线/信号与交易软件口径一致（不含盘中实时价，实时价仅用于价格线与突破判断）
     const series = closes.slice();
 
@@ -211,7 +224,10 @@ window.ST = window.ST || {};
   function applyQuote(stock, q) {
     if (!q) return;
     if (q.name) stock.name = q.name;
-    if (isFinite(q.prevClose) && q.prevClose > 0) stock.prevClose = Math.round(q.prevClose * 100) / 100;
+    if (isFinite(q.prevClose) && q.prevClose > 0) {
+      stock._realPrevClose = Math.round(q.prevClose * 100) / 100;   // 记录真实昨收（上一交易日收盘），供今日涨跌使用
+      stock.prevClose = stock._realPrevClose;
+    }
     if (isFinite(q.price) && q.price > 0) stock.currentPrice = Math.round(q.price * 100) / 100;
     if (isFinite(q.open) && q.open > 0) stock.todayOpen = Math.round(q.open * 100) / 100;
     if (isFinite(q.high) && q.high > 0) stock.todayHigh = Math.round(q.high * 100) / 100;

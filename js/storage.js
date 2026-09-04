@@ -21,8 +21,8 @@ window.ST = window.ST || {};
     shortMA: 5,        // 短期均线
     midMA: 20,         // 中期均线
     longMA: 60,        // 长期均线
-    stopLoss: 8,       // 止损线（累计跌幅 %）
-    takeProfit: 25,    // 止盈线（累计涨幅 %）
+    stopLoss: 8,       // 止损线（持仓跌幅 %）
+    takeProfit: 25,    // 止盈线（持仓涨幅 %）
     breakoutRatio: 0.01, // 突破阈值（相对 MA5 偏离 1%）
     autoUpdate: true,    // 是否开启自动更新
     intervalSec: 60     // 自动更新间隔（秒）

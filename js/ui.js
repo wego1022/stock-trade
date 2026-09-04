@@ -950,8 +950,8 @@ window.ST = window.ST || {};
       if (p.mode === "dip") return `上升趋势(MA${p.shortMA}>MA${p.midMA}>MA${p.longMA})中，现价回踩 MA${p.midMA} 附近且拐头向上时买入`;
       return `MA${p.shortMA}>MA${p.midMA}>MA${p.longMA} 完全多头且现价站上 MA${p.longMA} 时买入`;
     }
-    if (s.attr === "sell_partial") return `累计涨幅 ≥ ${p.gainPct}% 时，卖出约 ${Math.round((p.ratio || 0.3) * 100)}% 落袋（每轮持仓仅触发一次）`;
-    if (p.mode === "stoploss") return `累计跌幅 ≤ -${Math.abs(p.lossPct)}% 时清仓卖出`;
+    if (s.attr === "sell_partial") return `持仓涨幅 ≥ ${p.gainPct}% 时，卖出约 ${Math.round((p.ratio || 0.3) * 100)}% 落袋（每轮持仓仅触发一次）`;
+    if (p.mode === "stoploss") return `持仓跌幅 ≤ -${Math.abs(p.lossPct)}% 时清仓卖出`;
     return `现价跌破 MA${p.ma} 时清仓卖出`;
   }
   function nvSt(id, def) { const v = parseFloat(document.getElementById(id).value); return isNaN(v) ? def : v; }
@@ -981,7 +981,7 @@ window.ST = window.ST || {};
 
       <div class="strat-params" data-sed="sell_partial">
         <div class="op-hint">部分止盈</div>
-        <div class="form-row"><label>触发累计涨幅(%)</label><input id="sedGain" type="number" min="0" step="0.5" value="${p.gainPct != null ? p.gainPct : 25}"></div>
+        <div class="form-row"><label>触发持仓涨幅(%)</label><input id="sedGain" type="number" min="0" step="0.5" value="${p.gainPct != null ? p.gainPct : 25}"></div>
         <div class="form-row"><label>卖出比例(%)</label><input id="sedRatio" type="number" min="1" max="100" step="1" value="${Math.round((p.ratio != null ? p.ratio : 0.3) * 100)}"></div>
       </div>
 
@@ -991,7 +991,7 @@ window.ST = window.ST || {};
           <option value="stoploss" ${p.mode !== "belowMA" ? "selected" : ""}>跌破止损线</option>
           <option value="belowMA" ${p.mode === "belowMA" ? "selected" : ""}>跌破长期均线</option>
         </select></div>
-        <div class="form-row" data-sed-all="stoploss"><label>止损线(%)</label><input id="sedLoss" type="number" min="1" step="0.5" value="${Math.abs(p.lossPct != null ? p.lossPct : 8)}"></div>
+        <div class="form-row" data-sed-all="stoploss"><label>持仓止损线(%)</label><input id="sedLoss" type="number" min="1" step="0.5" value="${Math.abs(p.lossPct != null ? p.lossPct : 8)}"></div>
         <div class="form-row" data-sed-all="belowMA"><label>长期均线周期</label><input id="sedSellma" type="number" min="1" value="${p.ma || 60}"></div>
       </div>`;
     updateStrategyEditParams();
